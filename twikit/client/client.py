@@ -1523,7 +1523,7 @@ class Client:
                 results.append(tweet)
 
         if entries[-1]['entryId'].startswith('cursor'):
-            next_cursor = entries[-1]['content']['itemContent']['value']
+            next_cursor = entries[-1]['content']['value']
             _fetch_next_result = partial(self._get_more_replies, tweet_id, next_cursor)
         else:
             next_cursor = None
@@ -1596,6 +1596,8 @@ class Client:
 
             if entry['entryId'] == f'tweet-{tweet_id}':
                 tweet = tweet_object
+                if entry['content']['itemContent']['tweetDisplayType']=='SelfThread':
+                    tweet.thread = []
             else:
                 if tweet is None:
                     reply_to.append(tweet_object)
@@ -1604,35 +1606,34 @@ class Client:
                     sr_cursor = None
                     show_replies = None
 
-                    for reply in entry['content']['items'][1:]:
+                    for reply in entry['content']['items']:
                         if 'tweetcomposer' in reply['entryId']:
                             continue
-                        if 'tweet' in reply.get('entryId'):
+                        if ('tweet' in reply.get('entryId')) and ('promoted' not in reply.get('entryId')):
                             rpl = tweet_from_data(self, reply)
                             if rpl is None:
                                 continue
+                            if (tweet.thread is not None) and (rpl.user==tweet.user) and (find_dict(reply,'in_reply_to_user_id_str')[0]==str(rpl.user.id)):
+                                tweet.thread.append(rpl)
                             replies.append(rpl)
                         if 'cursor' in reply.get('entryId'):
-                            sr_cursor = reply['item']['itemContent']['value']
+                            sr_cursor = reply['item']['value']
                             show_replies = partial(
                                 self._show_more_replies,
                                 tweet_id,
                                 sr_cursor
                             )
-                    tweet_object.replies = Result(
-                        replies,
-                        show_replies,
-                        sr_cursor
-                    )
-                    replies_list.append(tweet_object)
-
-                    display_type = find_dict(entry, 'tweetDisplayType', True)
-                    if display_type and display_type[0] == 'SelfThread':
-                        tweet.thread = [tweet_object, *replies]
+                    if len(replies)>0:
+                        tweet_object.replies = Result(
+                            replies,
+                            show_replies,
+                            sr_cursor
+                        )
+                        replies_list.append(tweet_object)
 
         if entries[-1]['entryId'].startswith('cursor'):
             # if has more replies
-            reply_next_cursor = entries[-1]['content']['itemContent']['value']
+            reply_next_cursor = entries[-1]['content']['value']
             _fetch_more_replies = partial(self._get_more_replies,
                                           tweet_id, reply_next_cursor)
         else:
