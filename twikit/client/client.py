@@ -1616,8 +1616,8 @@ class Client:
                             if (tweet.thread is not None) and (rpl.user==tweet.user) and (find_dict(reply,'in_reply_to_user_id_str')[0]==str(rpl.user.id)):
                                 tweet.thread.append(rpl)
                             replies.append(rpl)
-                        if 'cursor' in reply.get('entryId'):
-                            sr_cursor = reply['item']['value']
+                        if 'cursor' in reply.get('entryId'):                            
+                            sr_cursor = reply['item']['value'] if ('item' in reply) and ('value' in reply['item']) else ''
                             show_replies = partial(
                                 self._show_more_replies,
                                 tweet_id,
