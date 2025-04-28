@@ -1576,7 +1576,7 @@ class Client:
 
         if 'errors' in response:
             raise TweetNotAvailable(response['errors'][0]['message'])
-
+        
         entries = find_dict(response, 'entries', find_one=True)[0]
         reply_to = []
         replies_list = []
@@ -1633,9 +1633,15 @@ class Client:
 
         if entries[-1]['entryId'].startswith('cursor'):
             # if has more replies
-            reply_next_cursor = entries[-1]['content']['value']
-            _fetch_more_replies = partial(self._get_more_replies,
-                                          tweet_id, reply_next_cursor)
+            cnt = entries[-1]['content']
+            reply_next_cursor = None
+            if 'itemContent' in cnt:
+                reply_next_cursor = cnt['itemContent'].get('value',None)
+            else:
+                reply_next_cursor = cnt.get('value',None)
+            if reply_next_cursor:
+                _fetch_more_replies = partial(self._get_more_replies,
+                                              tweet_id, reply_next_cursor)
         else:
             reply_next_cursor = None
             _fetch_more_replies = None
